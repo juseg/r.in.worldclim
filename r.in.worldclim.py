@@ -23,7 +23,7 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-#############################################################################
+############################################################################
 
 # Todo:
 # * warn for overriding
@@ -32,7 +32,13 @@
 # * support for past data
 
 # Version history:
-# * 30/06/2011
+# * 15/01/2013 (0.3)
+#  - added c flag for conversion to degree Celcius
+#  - added k flag for conversion to Kelvin
+#  - added y flag for conversion to meter per year
+#  - added f flag for conversion to float
+#  - zero-padded output raster names
+# * 30/06/2011 (0.2r1)
 #  - corrected a bug in global 30s file naming
 # * 25/05/2011 (0.2)
 #  - support for tiled data
@@ -93,9 +99,26 @@
 #% answer: wc_
 #%end
 
+#%flag
+#%  key: c
+#%  description: Convert tmin,tmax,tmean to degree Celcius
+#%end
+#%flag
+#%  key: k
+#%  description: Convert tmin,tmax,tmean to Kelvin
+#%end
+#%flag
+#%  key: y
+#%  description: Convert precipitation to meter per year
+#%end
+#%flag
+#%  key: f
+#%  description: Convert to floating-point
+#%end
+
 import os
 from zipfile import ZipFile
-from grass.script import core as grass
+import grass.script as grass
 
 ### GRASS parser output processing ###
 
@@ -113,7 +136,7 @@ def grass_str_list(option):
 ### Import functions ###
 
 def import_layer(field, region, res=None, tile=None, layer=None):
-		"""Wrapper to the import_file() function"""
+		"""Wrapper to the import_file() and convert_map() functions"""
 
 		# pass arguments to the import file function via naming funcions
 		import_file(
@@ -121,6 +144,11 @@ def import_layer(field, region, res=None, tile=None, layer=None):
 			archive_name(field, layer=layer, res=res, tile=tile),
 			output_name(field, layer=layer, res=res, tile=tile),
 			region)
+
+		# call convert_map for unit and format conversion
+		convert_map(
+			output_name(field, layer=layer, res=res, tile=tile),
+			field)
 
 def import_file(filename, archive, output, region):
 		"""Extracts one binary file from its archive and import it"""
@@ -189,6 +217,37 @@ def import_fields(res=None, tile=None):
 					else:
 					 import_layer(field, region, layer=layer, res=res, tile=tile)
 
+def convert_map(output, field):
+		"""Convert imported raster map unit and format"""
+
+		# prepare for unit conversion
+		if flags['c'] and field in ['tmin', 'tmax', 'tmean']:
+			grass.message('converting ' + output + ' to degree Celcius...')
+			a = 0.1
+			b = 0
+		elif flags['k'] and field in ['tmin', 'tmax', 'tmean']:
+			grass.message('converting ' + output + ' to Kelvin...')
+			a = 0.1
+			b = 273.15
+		elif flags['y'] and field == 'prec':
+			grass.message('converting ' + output + ' to meter per year...')
+			a = 0.012
+			b = 0
+		elif flags['f']:
+			grass.message('converting ' + output + ' to floating-point...')
+			a = 1
+			b = 0
+		else:
+			a = None
+			b = None
+
+		# convert unit and format
+		if a or b:
+			grass.use_temp_region()
+			grass.run_command('g.region', rast=output)
+			grass.mapcalc('$output=float($output*%s+%s)' % (a,b), output=output)
+			grass.del_temp_region()
+
 ### Input and output name and region conventions ###
 
 def archive_name(field, res=None, tile=None, layer=None):
@@ -233,7 +292,7 @@ def output_name(field, res=None, tile=None, layer=None):
 		"""Return an output name for the resulting raster map"""
 
 		# convert layer to a string or empty string if None
-		if layer: layerstr = str(layer)
+		if layer: layerstr = '%02i' % layer
 		else    : layerstr = ''
 
 		# for global data
