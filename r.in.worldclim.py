@@ -26,11 +26,14 @@
 #############################################################################
 
 # Todo:
+# * warn for overriding
 # * import single files
 # * interactive download
 # * support for past data
 
 # Version history:
+# * 30/06/2011
+#  - corrected a bug in global 30s file naming
 # * 25/05/2011 (0.2)
 #  - support for tiled data
 #  - use os.path.join() for portability
@@ -215,10 +218,10 @@ def file_name(field, res=None, tile=None, layer=None):
 		if layer: layerstr = str(layer)
 		else    : layerstr = ''
 
-		# for global data (the bio 30s data has different naming)
+		# for global data (the 30s data has different naming)
 		if res:
-			if field == 'bio' and res == '30s':
-				return 'bio_' + layerstr + '.bil'
+			if field <> 'alt' and res == '30s':
+				return field + '_' + layerstr + '.bil'
 			else:
 				return field + layerstr + '.bil'
 
