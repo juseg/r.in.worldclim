@@ -6,7 +6,7 @@
 #
 # AUTHOR(S):   Julien Seguinot
 #
-# PURPOSE:     Import multiple WorldClim current [1] global climate data.
+# PURPOSE:     Import multiple WorldClim current [1] climate data.
 #
 # COPYRIGHT:   (c) 2011 Julien Seguinot
 #
@@ -25,22 +25,28 @@
 #
 #############################################################################
 
+# Todo:
+# * import single files
+# * interactive download
+# * support for past data
+
+# Version history:
+# * 25/05/2011 (0.2)
+#  - support for tiled data
+#  - use os.path.join() for portability
+#  - parse the script in functions for readability
+# * 16/05/2011 (0.1)
+#  - first version, import current global data only
+
 #%Module
-#% description: Import multiple WorldClim current global climate data.
+#% description: Import multiple WorldClim current climate data.
 #% keywords: raster import worldclim
 #%End
-#%option
-#% key: res
-#% type: string
-#% description: Resolution(s) to import
-#% options: 30s,2-5m,5m,10m
-#% required: yes
-#% multiple: yes
-#%end
+
 #%option
 #% key: fields
 #% type: string
-#% description: Fields(s) to import (use tmin for all tmin* fields etc)
+#% description: Fields(s) to import
 #% options: tmin,tmax,tmean,prec,bio,alt
 #% required: yes
 #% multiple: yes
@@ -53,6 +59,22 @@
 #% required: no
 #%end
 #%option
+#% key: res
+#% type: string
+#% description: Global set resolution(s) to import
+#% options: 30s,2.5m,5m,10m
+#% required: no
+#% multiple: yes
+#%end
+#%option
+#% key: tiles
+#% type: integer
+#% description: 30 arc-minutes tiles(s) to import
+#% options: 00,01,02,03,04,05,06,07,08,09,010,011,10,11,12,13,14,15,16,17,18,19,111,111,20,21,22,23,24,25,26,27,28,29,212,211,30,31,32,33,34,35,36,37,38,39,313,311,40,41,42,43,44,45,46,47,48,49,414,411
+#% required: no
+#% multiple: yes
+#%end
+#%option
 #% key: layers
 #% type: integer
 #% description: Layer(s) to import (default: all)
@@ -63,30 +85,48 @@
 #%option
 #% key: prefix
 #% type: string
-#% description: Prefix for imported raster layers (default: wc)
+#% description: Prefix for imported raster layers
 #% required: no
-#% answer: wc
+#% answer: wc_
 #%end
 
-import os # NOTE for GRASS 7: becomes unnecessary
+import os
 from zipfile import ZipFile
 from grass.script import core as grass
 
-def import_file(archive, filename, output, rows, cols):
-		"""Import WorldClim binary file as raster map
+### GRASS parser output processing ###
 
-		@param archive archive where to find the input file
-		@param filename input file to import
-		@param output name of output raster map
-		@param rows number of rows
-		@param cols number of columns
-		"""
+def grass_int_list(option):
+		"""Return a list of integers from grass parsed option"""
+		if option:
+			return map(int, grass_str_list(option))
+		else:
+			return []
+
+def grass_str_list(option):
+		"""Return a list of strings from grass parsed option"""
+		return option.split(',')
+
+### Import functions ###
+
+def import_layer(field, region, res=None, tile=None, layer=None):
+		"""Wrapper to the import_file() function"""
+
+		# pass arguments to the import file function via naming funcions
+		import_file(
+			file_name(field, layer=layer, res=res, tile=tile),
+			archive_name(field, layer=layer, res=res, tile=tile),
+			output_name(field, layer=layer, res=res, tile=tile),
+			region)
+
+def import_file(filename, archive, output, region):
+		"""Extracts one binary file from its archive and import it"""
 
 		# test if the file exists
 		try:
-			a = ZipFile(archive + '.zip', 'r')
+			a = ZipFile(archive, 'r')
 		except:
-			grass.error('could not open ' + archive + '.zip')
+			grass.error('could not open ' + archive)
 			return
 
 		# create a grass tempdir
@@ -98,109 +138,160 @@ def import_file(archive, filename, output, rows, cols):
 			#tempdir = grass.tempdir()
 
 		# extract the layer there
-		grass.message('inflating ' + filename + '.bil...')
-		a.extract(filename + '.bil', tempdir)
+		grass.message('inflating ' + filename + '...')
+		a.extract(filename, tempdir)
 		a.close()
+		tempfile = os.path.join(tempdir, filename)
 
 			# NOTE for Python 2.7: use a with statement instead
 			#with ZipFile(archive + '.zip', 'r') as a:
 			#	a.extract(file + '.bil', tempfile)
 
 		# import the layer into GRASS
-		grass.message('importing ' + output + '...')
-		grass.run_command('r.in.bin',	flags='s', overwrite=True,
-			input=tempdir + '/' + filename + '.bil', output=output ,
-			north=90  , south=-60  , east=180,  west=-180,
-			bytes=2   , anull=-9999, rows=rows, cols=cols)
+		grass.message('importing ' + filename + ' as ' + output + '...')
+		grass.run_command('r.in.bin',	flags='s', overwrite=True, input=tempfile, output=output, bytes=2, anull=-9999, **region)
 
 		# remove the inflated file and tempdir
-		grass.try_remove(tempdir + '/' + filename + '.bil')
+		grass.try_remove(tempfile)
 		grass.try_rmdir(tempdir)
 
-def main(): # main function, called at execution time
-		# parse arguments (unfortunately GRASS parser seem not to return lists)
-		allres   = options['res'].split(',')    # required
-		fields   = options['fields'].split(',') # required
-		inputdir = options['inputdir']          # optional
-		try:    layers = map(int, options['layers'].split(','))
-		except: layers = []                     # optional
-		prefix   = options['prefix']            # optional
+def import_fields(res=None, tile=None):
+		"""Import requested fields for a given tile or resolution"""
 
-		# store numbers of rows in a dictionary
-		rowsdict = {
-			'10m' : 900,
-			'5m'  : 1800,
-			'2-5m': 3600,
-			'30s' : 18000}
+		# parse needed options
+		inputdir = options['inputdir']
+		fields   = grass_str_list(options['fields'])
+		layers   = grass_int_list(options['layers'])
 
-		# store numbers of cols in a dictionary
-		colsdict = {
-			'10m' : 2160,
-			'5m'  : 4320,
-			'2-5m': 8640,
-			'30s' : 43200}
+		# compute region extents
+		region = region_extents(res=res, tile=tile)
 
-		# for each of the requested resolutions
-		for res in allres:
-			resprefix = prefix + '_' + res + '_'
-			rows      = rowsdict[res]
-			cols      = colsdict[res]
+		# for each of the requested fields
+		for field in fields:
 
-			# for each of the requested fields
-			for field in fields:
+			# alt is a special case since there is only one layer
+			if field == 'alt':
+				import_layer('alt', region, res=res, tile=tile)
 
-				# alt is a special case since there is only one layer
-				if field == 'alt': import_file(
-					inputdir + 'alt_' + res + '_bil',
-					'alt',
-					resprefix + 'alt',
-					rows, cols)
+			# bio is a bit of a special case too since there are 18 layers
+			elif field == 'bio':
+				for layer in ( layers if layers else range(1,19) ):
+					import_layer(field, region, layer=layer, res=res, tile=tile)
 
-				# bio is a little bit of a special case too
-				elif field == 'bio':
+			# other fields have 12 layers
+			else:
+				for layer in ( layers if layers else range(1,13) ):
+					if layer > 12:
+						grass.error(field + str(layer) + ': no such layer')
+					else:
+					 import_layer(field, region, layer=layer, res=res, tile=tile)
 
-					# for each of the requested or all 18 layers
-					for layer in ( layers if layers else range(1,19) ):
+### Input and output name and region conventions ###
 
-						# the 30s resolution is packed in two files with different naming
-						if res == '30s':
-							if layer <= 9 : import_file(
-								inputdir + 'bio1-9_30s_bil',
-								'bio_' + str(layer),
-								resprefix + 'bio' + str(layer),
-								rows, cols)
-							if layer >= 10: import_file(
-								inputdir + 'bio10-19_30s_bil',
-								'bio_' + str(layer),
-								resprefix + 'bio' + str(layer),
-								rows, cols)
+def archive_name(field, res=None, tile=None, layer=None):
+		"""Return the name of the corresponding zip archive"""
 
-						# the rest is named on the regular basis
-						else: import_file(inputdir + 'bio_' + res + '_bil',
-							'bio' + str(layer),
-							resprefix + 'bio' + str(layer),
-							rows, cols)
+		# for global data (the bio 30s data is packed in two files)
+		if res:
+			if field == 'bio' and res == '30s':
+				if layer <= 9 :
+					archive = 'bio1-9_30s_bil.zip'
+				if layer >= 10:
+					archive = 'bio10-19_30s_bil.zip'
+			else:
+				archive = field + '_' + res.replace('.','-') + '_bil.zip'
 
-				# now the other fields are all similar
-				else:
+		# for tiled data
+		elif tile:
+			archive = field + '_' + str(tile) + '.zip'
 
-					# for each of the requested or all 12 layers
-					for layer in ( layers if layers else range(1,13) ):
-						filename = field + str(layer)
+		# return full path
+		return os.path.join(options['inputdir'], archive)
 
-						# emit a warning if layer is out of range (can't happen for bio)
-						if int(layer) > 12: grass.warning(filename + ' : no such layer')
+def file_name(field, res=None, tile=None, layer=None):
+		"""Return the name of the conrresponding binary file"""
 
-						# else import it
-						else: import_file(
-							inputdir + field + '_' + res + '_bil',
-							filename,
-							resprefix + filename,
-							rows, cols)
+		# convert layer to a string or empty string if None
+		if layer: layerstr = str(layer)
+		else    : layerstr = ''
+
+		# for global data (the bio 30s data has different naming)
+		if res:
+			if field == 'bio' and res == '30s':
+				return 'bio_' + layerstr + '.bil'
+			else:
+				return field + layerstr + '.bil'
+
+		# for tiled data
+		elif tile:
+			return field + layerstr + '_' + str(tile) + '.bil'
+
+def output_name(field, res=None, tile=None, layer=None):
+		"""Return an output name for the resulting raster map"""
+
+		# convert layer to a string or empty string if None
+		if layer: layerstr = str(layer)
+		else    : layerstr = ''
+
+		# for global data
+		if res:
+			name = res + '_' + field + layerstr
+
+		# for tiled data
+		elif tile:
+			name = 't' + str(tile) + '_' + field + layerstr
+
+		# return full name with prefix
+		return options['prefix'] + name
+
+def region_extents(res=None, tile=None):
+		"""Return region extents for a given resolution or tile"""
+
+		# for global data
+		if res:
+			if   res == '10m' : rows =   900; cols =  2160 
+			elif res == '5m'  : rows =  1800; cols =  4320
+			elif res == '2.5m': rows =  3600; cols =  8640
+			elif res == '30s' : rows = 18000; cols = 43200
+			return {
+				'north':   90, 'south':  -60,
+				'west' : -180, 'east' :  180,
+				'rows' : rows, 'cols' : cols}
+
+		# for tiled data
+		elif tile:
+			tilerow = int(tile/10)
+			tilecol = tile-10*tilerow
+			return {
+				'north': 30*(3-tilerow), 'south': 30*(2-tilerow),
+				'west' : 30*(tilecol-6), 'east' : 30*(tilecol-5),
+				'rows' : 3600          , 'cols' : 3600}
+
+### Main function ###
+
+def main():
+		"""Main function, called at execution time"""
+
+		# parse requested resolutions and tiles
+		allres = grass_str_list(options['res'])
+		tiles  = grass_int_list(options['tiles'])
+
+		# warm for data overriding
+
+		# import global datasets
+		if allres <> ['']:
+			for res in allres:
+				import_fields(res=res)
+
+		# import requested tiles
+		for tile in tiles:
+			import_fields(tile=tile)
+
+### Main program ###
 
 if __name__ == "__main__":
-    options, flags = grass.parser()
-    main()
+		options, flags = grass.parser()
+		main()
 
 # Links
 # [1] http://www.worldclim.org/current
