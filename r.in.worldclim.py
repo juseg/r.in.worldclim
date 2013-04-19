@@ -153,38 +153,28 @@ def import_layer(field, region, res=None, tile=None, layer=None):
 def import_file(filename, archive, output, region):
 		"""Extracts one binary file from its archive and import it"""
 
-		# test if the file exists
-		try:
-			a = ZipFile(archive, 'r')
-		except:
-			grass.error('could not open ' + archive)
-			return
+		# open the archive
+		with ZipFile(archive, 'r') as a:
 
-		# create a grass tempdir
-		tempdir = grass.tempfile()
-		grass.try_remove(tempdir)
-		os.mkdir(tempdir)
+			# create temporary file and directory
+			tempdir = grass.tempdir()
+			tempfile = os.path.join(tempdir, filename)
 
-			# NOTE for GRASS 7: use grass.tempdir() instead
-			#tempdir = grass.tempdir()
+			# try to inflate and import the layer
+			try:
+				grass.message('inflating ' + filename + '...')
+				a.extract(filename, tempdir)
+				grass.message('importing ' + filename + ' as ' + output + '...')
+				grass.run_command('r.in.bin',	flags='s', overwrite=True, input=tempfile, output=output, bytes=2, anull=-9999, **region)
 
-		# extract the layer there
-		grass.message('inflating ' + filename + '...')
-		a.extract(filename, tempdir)
-		a.close()
-		tempfile = os.path.join(tempdir, filename)
+			# if file is not present in the archive
+			except KeyError:
+				grass.fatal('could not find %s in %s' % (filename, archive))
 
-			# NOTE for Python 2.7: use a with statement instead
-			#with ZipFile(archive + '.zip', 'r') as a:
-			#	a.extract(file + '.bil', tempfile)
-
-		# import the layer into GRASS
-		grass.message('importing ' + filename + ' as ' + output + '...')
-		grass.run_command('r.in.bin',	flags='s', overwrite=True, input=tempfile, output=output, bytes=2, anull=-9999, **region)
-
-		# remove the inflated file and tempdir
-		grass.try_remove(tempfile)
-		grass.try_rmdir(tempdir)
+			# make sure temporary files are cleaned
+			finally:
+				grass.try_remove(tempfile)
+				grass.try_rmdir(tempdir)
 
 def import_fields(res=None, tile=None):
 		"""Import requested fields for a given tile or resolution"""
