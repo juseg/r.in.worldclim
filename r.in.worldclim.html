@@ -1,0 +1,32 @@
+<h2>DESCRIPTION</h2>
+
+<em><b>r.in.worldclim.py</b></em> imports multiple files from the <a href="http://www.worldclim.org/current/">WorldClim current</a> climate dataset. The data can be imported by tiles with <em>tiles=...</em> or globally with <em>res=...</em>. The script inflates requested files from their original archives before importing them as raster maps into GRASS.</p>
+
+<h2>EXAMPLES</h2>
+
+<p>Import global mean temperature at 10 arc-min resolution:</p>
+<div class="code"><pre>
+r.in.worldclim.py fields=tmean res=10m
+</pre></div>
+
+<p>Import temperature and precipitation data for tile 16 (central Europe):</p>
+<div class="code"><pre>
+r.in.worldclim.py fields=tmean,prec tiles=16
+</pre></div>
+
+<h2>REFERENCES</h2>
+
+<ul>
+  <li>Hijmans, R.J., S.E. Cameron, J.L. Parra, P.G. Jones and A. Jarvis, (2005).
+      Very high resolution interpolated climate surfaces for global land areas.
+      International Journal of Climatology 25, 1965-1978
+      doi:<a href="http://dx.doi.org/10.1002/joc.1276">10.1002/joc.1276</a>.</li>
+  <li>J. Seguinot, C. Khroulev, I. Rogozhina, Q. Zhang, and A. Stroeven (2013).
+      The effect of climate forcing on numerical simulations of the Cordilleran Ice Sheet at the last Glacial Maximum.
+      The Cryosphere Discussions, 7, 1-42,
+      doi:<a href="http://dx.doi.org/10.5194/tcd-7-6171-2013">10.5194/tcd-7-6171-2013</a>.</li>
+</ul>
+
+<h2>AUTHOR</h2>
+
+<p>Julien Seguinot, Stockholm University</p>
