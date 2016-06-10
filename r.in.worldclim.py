@@ -74,7 +74,6 @@ COPYRIGHT:   (c) 2011-2014 Julien Seguinot
 #% key: tiles
 #% type: string
 #% description: 30 arc-minutes tiles(s) to import
-#% options: 00,01,02,03,04,05,06,07,08,09,010,011,10,11,12,13,14,15,16,17,18,19,111,111,20,21,22,23,24,25,26,27,28,29,212,211,30,31,32,33,34,35,36,37,38,39,313,311,40,41,42,43,44,45,46,47,48,49,414,411
 #% required: no
 #% multiple: yes
 #%end
@@ -337,6 +336,13 @@ def main():
     # parse requested resolutions and tiles
     allres = grass_str_list(options['res'])
     tiles = grass_str_list(options['tiles'])
+
+    # check that tile names are legal
+    legaltiles = [str(j)+str(i) for j in range(5) for i in range(12)]
+    for t in tiles:
+        if t not in legaltiles:
+            grass.fatal('tile %s is not a valid WorldClim tile, see '
+                        'http://www.worldclim.org/tiles.php' % t)
 
     # import global datasets
     if allres != ['']:
