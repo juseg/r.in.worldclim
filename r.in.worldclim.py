@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
 """
-MODULE:      r.in.worldclim
+MODULE:     r.in.worldclim
 
-AUTHOR(S):   Julien Seguinot <julien.seguino@natgeo.su.se>.
+AUTHOR(S):  Julien Seguinot <seguinot@vaw.baug.ethz.ch>.
 
-PURPOSE:     Import multiple WorldClim current [1] climate data.
+PURPOSE:    Import multiple WorldClim current [1] climate data.
 
-COPYRIGHT:   (c) 2011-2014 Julien Seguinot
+COPYRIGHT:  (c) 2011-2016 Julien Seguinot
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -24,7 +24,10 @@ COPYRIGHT:   (c) 2011-2014 Julien Seguinot
 """
 
 # Todo:
-# * interactive download
+# * (0.4)
+#  - warn if no res nor tile selected
+#  - upload to GRASS repo/wiki
+#  - interactive download
 
 # Version history:
 # * 15/01/2013 (0.3)
@@ -115,7 +118,7 @@ from zipfile import ZipFile
 import grass.script as grass
 
 
-### GRASS parser output processing ###
+# GRASS parser output processing
 
 def grass_int_list(option):
     """Return a list of integers from grass parsed option"""
@@ -130,7 +133,7 @@ def grass_str_list(option):
     return option.split(',')
 
 
-### Import functions ###
+# Import functions
 
 def import_layer(field, region, res=None, tile=None, layer=None):
     """Wrapper to the import_file() and convert_map() functions"""
@@ -239,7 +242,7 @@ def convert_map(output, field):
         grass.del_temp_region()
 
 
-### Input and output name and region conventions ###
+# Input and output name and region conventions
 
 def archive_name(field, res=None, tile=None, layer=None):
     """Return the name of the corresponding zip archive"""
@@ -328,7 +331,7 @@ def region_extents(res=None, tile=None):
                 'rows': 3600, 'cols': 3600}
 
 
-### Main function ###
+# Main function
 
 def main():
     """Main function, called at execution time"""
@@ -354,7 +357,7 @@ def main():
         import_fields(tile=tile)
 
 
-### Main program ###
+# Main program
 
 if __name__ == "__main__":
     options, flags = grass.parser()
