@@ -72,7 +72,7 @@ COPYRIGHT:   (c) 2011-2014 Julien Seguinot
 #%end
 #%option
 #% key: tiles
-#% type: integer
+#% type: string
 #% description: 30 arc-minutes tiles(s) to import
 #% options: 00,01,02,03,04,05,06,07,08,09,010,011,10,11,12,13,14,15,16,17,18,19,111,111,20,21,22,23,24,25,26,27,28,29,212,211,30,31,32,33,34,35,36,37,38,39,313,311,40,41,42,43,44,45,46,47,48,49,414,411
 #% required: no
@@ -322,8 +322,8 @@ def region_extents(res=None, tile=None):
 
     # for tiled data
     elif tile:
-        tilerow = int(tile/10)
-        tilecol = tile-10*tilerow
+        tilerow = int(tile[0])
+        tilecol = int(tile[1:])
         return {'north': 30*(3-tilerow), 'south': 30*(2-tilerow),
                 'west': 30*(tilecol-6), 'east': 30*(tilecol-5),
                 'rows': 3600, 'cols': 3600}
@@ -336,7 +336,7 @@ def main():
 
     # parse requested resolutions and tiles
     allres = grass_str_list(options['res'])
-    tiles = grass_int_list(options['tiles'])
+    tiles = grass_str_list(options['tiles'])
 
     # import global datasets
     if allres != ['']:
