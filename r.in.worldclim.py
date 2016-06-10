@@ -121,7 +121,7 @@ import grass.script as grass
 # GRASS parser output processing
 
 def grass_int_list(option):
-    """Return a list of integers from grass parsed option"""
+    """Return a list of integers from grass parsed option."""
     if option:
         return map(int, grass_str_list(option))
     else:
@@ -129,14 +129,14 @@ def grass_int_list(option):
 
 
 def grass_str_list(option):
-    """Return a list of strings from grass parsed option"""
+    """Return a list of strings from grass parsed option."""
     return option.split(',')
 
 
 # Import functions
 
 def import_layer(field, region, res=None, tile=None, layer=None):
-    """Wrapper to the import_file() and convert_map() functions"""
+    """Wrapper to the import_file() and convert_map() functions."""
 
     # pass arguments to the import file function via naming funcions
     import_file(file_name(field, layer=layer, res=res, tile=tile),
@@ -150,7 +150,7 @@ def import_layer(field, region, res=None, tile=None, layer=None):
 
 
 def import_file(filename, archive, output, region):
-    """Extracts one binary file from its archive and import it"""
+    """Extracts one binary file from its archive and import it."""
 
     # open the archive
     with ZipFile(archive, 'r') as a:
@@ -161,16 +161,16 @@ def import_file(filename, archive, output, region):
 
         # try to inflate and import the layer
         try:
-            grass.message('inflating ' + filename + '...')
+            grass.message("Inflating '%s' ..." % filename)
             a.extract(filename, tempdir)
-            grass.message('importing ' + filename + ' as ' + output + '...')
+            grass.message("Importing '%s' as <%s> ..." % (filename, output))
             grass.run_command('r.in.bin',  flags='s', overwrite=True,
                               input=tempfile, output=output,
                               bytes=2, anull=-9999, **region)
 
         # if file is not present in the archive
         except KeyError:
-            grass.fatal('could not find %s in %s' % (filename, archive))
+            grass.fatal("Could not find '%s' in '%s'" % (filename, archive))
 
         # make sure temporary files are cleaned
         finally:
@@ -179,7 +179,7 @@ def import_file(filename, archive, output, region):
 
 
 def import_fields(res=None, tile=None):
-    """Import requested fields for a given tile or resolution"""
+    """Import requested fields for a given tile or resolution."""
 
     # parse needed options
     fields = grass_str_list(options['fields'])
@@ -204,30 +204,31 @@ def import_fields(res=None, tile=None):
         else:
             for layer in (layers if layers else range(1, 13)):
                 if layer > 12:
-                    grass.error(field + str(layer) + ': no such layer')
+                    grass.error("No layer '%d' for field '%s'"
+                                % (layer, field))
                 else:
                     import_layer(field, region,
                                  layer=layer, res=res, tile=tile)
 
 
 def convert_map(output, field):
-    """Convert imported raster map unit and format"""
+    """Convert imported raster map unit and format."""
 
     # prepare for unit conversion
     if flags['c'] and field in ['tmin', 'tmax', 'tmean']:
-        grass.message('converting ' + output + ' to degree Celcius...')
+        grass.message("Converting <%s> to degree Celcius..." % output)
         a = 0.1
         b = 0
     elif flags['k'] and field in ['tmin', 'tmax', 'tmean']:
-        grass.message('converting ' + output + ' to Kelvin...')
+        grass.message("Converting <%s> to Kelvin..." % output)
         a = 0.1
         b = 273.15
     elif flags['y'] and field == 'prec':
-        grass.message('converting ' + output + ' to meter per year...')
+        grass.message("Converting <%s> to meter per year..." % output)
         a = 0.012
         b = 0
     elif flags['f']:
-        grass.message('converting ' + output + ' to floating-point...')
+        grass.message("Converting <%s> to floating-point..." % output)
         a = 1
         b = 0
     else:
@@ -245,7 +246,7 @@ def convert_map(output, field):
 # Input and output name and region conventions
 
 def archive_name(field, res=None, tile=None, layer=None):
-    """Return the name of the corresponding zip archive"""
+    """Return the name of the corresponding zip archive."""
 
     # for global data (the bio 30s data is packed in two files)
     if res:
@@ -266,7 +267,7 @@ def archive_name(field, res=None, tile=None, layer=None):
 
 
 def file_name(field, res=None, tile=None, layer=None):
-    """Return the name of the conrresponding binary file"""
+    """Return the name of the conrresponding binary file."""
 
     # convert layer to a string or empty string if None
     layerstr = (str(layer) if layer else '')
@@ -284,7 +285,7 @@ def file_name(field, res=None, tile=None, layer=None):
 
 
 def output_name(field, res=None, tile=None, layer=None):
-    """Return an output name for the resulting raster map"""
+    """Return an output name for the resulting raster map."""
 
     # convert layer to a string or empty string if None
     layerstr = (('%02i' % layer) if layer else '')
@@ -302,7 +303,7 @@ def output_name(field, res=None, tile=None, layer=None):
 
 
 def region_extents(res=None, tile=None):
-    """Return region extents for a given resolution or tile"""
+    """Return region extents for a given resolution or tile."""
 
     # for global data
     if res:
@@ -334,7 +335,7 @@ def region_extents(res=None, tile=None):
 # Main function
 
 def main():
-    """Main function, called at execution time"""
+    """Main function, called at execution time."""
 
     # parse requested resolutions and tiles
     allres = grass_str_list(options['res'])
@@ -344,8 +345,8 @@ def main():
     legaltiles = [str(j)+str(i) for j in range(5) for i in range(12)]
     for t in tiles:
         if t not in legaltiles:
-            grass.fatal('tile %s is not a valid WorldClim tile, see '
-                        'http://www.worldclim.org/tiles.php' % t)
+            grass.fatal("Tile '%s' is not a valid WorldClim tile, see "
+                        "http://www.worldclim.org/tiles.php" % t)
 
     # import global datasets
     if allres != ['']:
