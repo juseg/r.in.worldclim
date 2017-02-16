@@ -131,6 +131,10 @@ COPYRIGHT:  (c) 2011-2016 Julien Seguinot
 #% required: res, tiles
 #%end
 
+#%rules
+#% exclusive: res, tiles
+#%end
+
 ##%rules
 ##% required: -p,tiles
 ##%end
@@ -219,7 +223,7 @@ def import_fields(res=None, tile=None):
 
         # bio is a bit of a special case too since there are 19 layers
         elif field == 'bio':
-            for layer in (layers if layers else range(1, 19)):
+            for layer in (layers if layers else range(1, 20)):
                 import_layer(field, region, layer=layer, res=res, tile=tile)
 
         # other fields have 12 layers
@@ -281,7 +285,7 @@ def archive_name(field, res=None, tile=None, layer=None):
             archive = field + '_' + res.replace('.', '-') + '_bil.zip'
 
     # for tiled data
-    elif tile:
+    else:
         archive = field + '_' + str(tile) + '.zip'
 
     # return full path
@@ -302,7 +306,7 @@ def file_name(field, res=None, tile=None, layer=None):
             return field + layerstr + '.bil'
 
     # for tiled data
-    elif tile:
+    else:
         return field + layerstr + '_' + str(tile) + '.bil'
 
 
@@ -317,7 +321,7 @@ def output_name(field, res=None, tile=None, layer=None):
         name = res + '_' + field + layerstr
 
     # for tiled data
-    elif tile:
+    else:
         name = 't' + str(tile) + '_' + field + layerstr
 
     # return full name with prefix
@@ -354,10 +358,7 @@ def region_extents(res=None, tile=None):
                 'rows': 3600, 'cols': 3600}
 
 
-
-
 # Main function
-
 def main():
     """Main function, called at execution time."""
 
@@ -366,20 +367,19 @@ def main():
     tiles = grass_str_list(options['tiles'])
 
     # check that tile names are legal
-    legaltiles = [str(j)+str(i) for j in range(5) for i in range(12)]
-    for t in tiles:
-        if t not in legaltiles:
-            grass.fatal("Tile '%s' is not a valid WorldClim tile, see "
-                        "http://www.worldclim.org/tiles.php" % t)
+    if options['tiles']:
+        legaltiles = [str(j)+str(i) for j in range(5) for i in range(12)]
+        for t in tiles:
+            if t not in legaltiles:
+                grass.fatal("Tile '%s' is not a valid WorldClim tile, see "
+                            "http://www.worldclim.org/tiles.php" % t)
+        for tile in tiles:
+            import_fields(tile=tile)
 
     # import global datasets
     if allres != ['']:
         for res in allres:
             import_fields(res=res)
-
-    # import requested tiles
-    for tile in tiles:
-        import_fields(tile=tile)
 
 
 # Main program
