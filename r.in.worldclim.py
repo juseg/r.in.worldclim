@@ -25,7 +25,7 @@ COPYRIGHT:  (c) 2011-2016 Julien Seguinot
 
 # Todo:
 # * (0.4)
-#  - warn if no res nor tile selected
+#  - warn if no res nor tile selected --> done
 #  - upload to GRASS repo/wiki
 #  - interactive download
 
@@ -58,6 +58,7 @@ COPYRIGHT:  (c) 2011-2016 Julien Seguinot
 #% required: yes
 #% multiple: yes
 #%end
+
 #%option
 #% key: inputdir
 #% type: string
@@ -65,6 +66,7 @@ COPYRIGHT:  (c) 2011-2016 Julien Seguinot
 #% description: Directory containing input files (default: current)
 #% required: no
 #%end
+
 #%option
 #% key: res
 #% type: string
@@ -73,6 +75,7 @@ COPYRIGHT:  (c) 2011-2016 Julien Seguinot
 #% required: no
 #% multiple: yes
 #%end
+
 #%option
 #% key: tiles
 #% type: string
@@ -80,6 +83,7 @@ COPYRIGHT:  (c) 2011-2016 Julien Seguinot
 #% required: no
 #% multiple: yes
 #%end
+
 #%option
 #% key: layers
 #% type: integer
@@ -88,6 +92,7 @@ COPYRIGHT:  (c) 2011-2016 Julien Seguinot
 #% required: no
 #% multiple: yes
 #%end
+
 #%option
 #% key: prefix
 #% type: string
@@ -100,18 +105,27 @@ COPYRIGHT:  (c) 2011-2016 Julien Seguinot
 #%  key: c
 #%  description: Convert tmin,tmax,tmean to degree Celcius
 #%end
+
 #%flag
 #%  key: k
 #%  description: Convert tmin,tmax,tmean to Kelvin
 #%end
+
 #%flag
 #%  key: y
 #%  description: Convert precipitation to meter per year
 #%end
+
 #%flag
 #%  key: f
 #%  description: Convert to floating-point
 #%end
+
+#%rules
+#% required: res, tiles
+#%end
+
+
 
 import os
 from zipfile import ZipFile
@@ -366,4 +380,3 @@ if __name__ == "__main__":
 
 # Links
 # [1] http://www.worldclim.org/current
-
