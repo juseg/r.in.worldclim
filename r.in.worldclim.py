@@ -28,6 +28,7 @@ COPYRIGHT:  (c) 2011-2016 Julien Seguinot
 #  - warn if no res nor tile selected --> done
 #  - upload to GRASS repo/wiki
 #  - interactive download
+#  - if tiles are imported, offer option to patch tiles
 
 # Version history:
 # * 15/01/2013 (0.3)
@@ -88,7 +89,7 @@ COPYRIGHT:  (c) 2011-2016 Julien Seguinot
 #% key: layers
 #% type: integer
 #% description: Layer(s) to import (default: all)
-#% options: 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18
+#% options: 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19
 #% required: no
 #% multiple: yes
 #%end
@@ -103,12 +104,12 @@ COPYRIGHT:  (c) 2011-2016 Julien Seguinot
 
 #%flag
 #%  key: c
-#%  description: Convert tmin,tmax,tmean to degree Celcius
+#%  description: Convert tmin, tmax, tmean to degree Celcius
 #%end
 
 #%flag
 #%  key: k
-#%  description: Convert tmin,tmax,tmean to Kelvin
+#%  description: Convert tmin, tmax, tmean to Kelvin
 #%end
 
 #%flag
@@ -121,11 +122,18 @@ COPYRIGHT:  (c) 2011-2016 Julien Seguinot
 #%  description: Convert to floating-point
 #%end
 
+##%flag
+##%  key: p
+##%  description: patch imported tiles
+##%end
+
 #%rules
 #% required: res, tiles
 #%end
 
-
+##%rules
+##% required: -p,tiles
+##%end
 
 import os
 from zipfile import ZipFile
@@ -209,7 +217,7 @@ def import_fields(res=None, tile=None):
         if field == 'alt':
             import_layer('alt', region, res=res, tile=tile)
 
-        # bio is a bit of a special case too since there are 18 layers
+        # bio is a bit of a special case too since there are 19 layers
         elif field == 'bio':
             for layer in (layers if layers else range(1, 19)):
                 import_layer(field, region, layer=layer, res=res, tile=tile)
@@ -344,6 +352,8 @@ def region_extents(res=None, tile=None):
         return {'north': 30*(3-tilerow), 'south': 30*(2-tilerow),
                 'west': 30*(tilecol-6), 'east': 30*(tilecol-5),
                 'rows': 3600, 'cols': 3600}
+
+
 
 
 # Main function
