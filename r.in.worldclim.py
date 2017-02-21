@@ -146,6 +146,7 @@ import grass.script as grass
 
 # GRASS parser output processing
 
+
 def grass_int_list(option):
     """Return a list of integers from grass parsed option."""
     if option:
@@ -267,7 +268,6 @@ def convert_map(output, field):
         grass.run_command('g.region', rast=output)
         grass.mapcalc('$output=float($output*%s+%s)' % (a, b), output=output)
         grass.del_temp_region()
-
 
 # Input and output name and region conventions
 
