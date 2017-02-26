@@ -1,9 +1,11 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 """
 MODULE:     r.in.worldclim
 
-AUTHOR(S):  Julien Seguinot <seguinot@vaw.baug.ethz.ch>.
+AUTHOR(S):  Julien Seguinot <seguinot@vaw.baug.ethz.ch> (original author)
+            Paulo van Breugel <pvb@ecodiv.earth>
 
 PURPOSE:    Import multiple WorldClim current [1] climate data.
 
@@ -23,49 +25,35 @@ COPYRIGHT:  (c) 2011-2016 Julien Seguinot
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-# Todo:
-# * (0.4)
-#  - warn if no res nor tile selected --> done
-#  - upload to GRASS repo/wiki
-#  - interactive download
-#  - if tiles are imported, offer option to patch tiles
-
-# Version history:
-# * 15/01/2013 (0.3)
-#  - added c flag for conversion to degree Celcius
-#  - added k flag for conversion to Kelvin
-#  - added y flag for conversion to meter per year
-#  - added f flag for conversion to float
-#  - zero-padded output raster names
-# * 30/06/2011 (0.2r1)
-#  - corrected a bug in global 30s file naming
-# * 25/05/2011 (0.2)
-#  - support for tiled data
-#  - use os.path.join() for portability
-#  - parse the script in functions for readability
-# * 16/05/2011 (0.1)
-#  - first version, import current global data only
-
 #%Module
 #% description: Import multiple WorldClim current climate data.
 #% keywords: raster import worldclim
-#%End
+#%end
 
-#%option
-#% key: fields
-#% type: string
-#% description: Fields(s) to import
-#% options: tmin,tmax,tmean,prec,bio,alt
-#% required: yes
-#% multiple: yes
+#%option G_OPT_M_DIR
+#% key: inputdir
+#% description: Directory containing input files (default: current)
+#% required: no
+#% guisection: import
 #%end
 
 #%option
-#% key: inputdir
+#% key: variables
 #% type: string
-#% gisprompt: old,file,input
-#% description: Directory containing input files (default: current)
+#% description: Variable(s) to import
+#% options: tmin,tmax,tmean,prec,bioclim,alt
+#% required: yes
+#% multiple: yes
+#% guisection: import
+#%end
+
+#%option
+#% key: tiles
+#% type: string
+#% description: 30 arc-minutes tiles(s) to import
 #% required: no
+#% multiple: yes
+#% guisection: import
 #%end
 
 #%option
@@ -75,57 +63,63 @@ COPYRIGHT:  (c) 2011-2016 Julien Seguinot
 #% options: 30s,2.5m,5m,10m
 #% required: no
 #% multiple: yes
+#% guisection: import
 #%end
 
 #%option
-#% key: tiles
-#% type: string
-#% description: 30 arc-minutes tiles(s) to import
-#% required: no
-#% multiple: yes
-#%end
-
-#%option
-#% key: layers
+#% key: bioclim
 #% type: integer
-#% description: Layer(s) to import (default: all)
-#% options: 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19
+#% description: Bioclim variable(s) to import (default: all)
 #% required: no
 #% multiple: yes
 #%end
 
 #%option
+#% key: months
+#% type: integer
+#% description: Month(s) for which to import climate data (default: all)
+#% required: no
+#% multiple: yes
+#%end
+
+#%option G_OPT_R_BASENAME_OUTPUT
 #% key: prefix
 #% type: string
 #% description: Prefix for imported raster layers
 #% required: no
 #% answer: wc_
+#% guisection: output
 #%end
 
 #%flag
 #%  key: c
 #%  description: Convert tmin, tmax, tmean to degree Celcius
+#% guisection: output
 #%end
 
 #%flag
 #%  key: k
 #%  description: Convert tmin, tmax, tmean to Kelvin
+#% guisection: output
 #%end
 
 #%flag
 #%  key: y
 #%  description: Convert precipitation to meter per year
+#% guisection: output
 #%end
 
 #%flag
 #%  key: f
 #%  description: Convert to floating-point
+#% guisection: output
 #%end
 
-##%flag
-##%  key: p
-##%  description: patch imported tiles
-##%end
+#%flag
+#%  key: p
+#%  description: do not patch imported tiles
+#% guisection: output
+#%end
 
 #%rules
 #% required: res, tiles
@@ -135,45 +129,34 @@ COPYRIGHT:  (c) 2011-2016 Julien Seguinot
 #% exclusive: res, tiles
 #%end
 
-##%rules
-##% required: -p,tiles
-##%end
+#%rules
+#% requires: -p,tiles
+#%end
 
 import os
+import sys
 from zipfile import ZipFile
 import grass.script as grass
-
-
-# GRASS parser output processing
-
-
-def grass_int_list(option):
-    """Return a list of integers from grass parsed option."""
-    if option:
-        return map(int, grass_str_list(option))
-    else:
-        return []
-
-
-def grass_str_list(option):
-    """Return a list of strings from grass parsed option."""
-    return option.split(',')
+import uuid
 
 
 # Import functions
-
-def import_layer(field, region, res=None, tile=None, layer=None):
+def import_layer(variable, region, res=None, tile=None, layer=None):
     """Wrapper to the import_file() and convert_map() functions."""
 
+    # get archive, file and output name
+    outputmap = output_name(variable, res, tile, layer)
+    filename = file_name(variable, layer=layer, res=res, tile=tile)
+    archivename = archive_name(variable, layer=layer, res=res, tile=tile)
+
     # pass arguments to the import file function via naming funcions
-    import_file(file_name(field, layer=layer, res=res, tile=tile),
-                archive_name(field, layer=layer, res=res, tile=tile),
-                output_name(field, layer=layer, res=res, tile=tile),
-                region)
+    import_file(filename, archivename, outputmap, region)
 
     # call convert_map for unit and format conversion
-    convert_map(output_name(field, layer=layer, res=res, tile=tile),
-                field)
+    convert_map(outputmap, variable)
+
+    # return name of output layer
+    return(outputmap)
 
 
 def import_file(filename, archive, output, region):
@@ -187,75 +170,73 @@ def import_file(filename, archive, output, region):
         tempfile = os.path.join(tempdir, filename)
 
         # try to inflate and import the layer
-        try:
-            grass.message("Inflating '%s' ..." % filename)
-            a.extract(filename, tempdir)
-            grass.message("Importing '%s' as <%s> ..." % (filename, output))
-            grass.run_command('r.in.bin',  flags='s', overwrite=True,
-                              input=tempfile, output=output,
-                              bytes=2, anull=-9999, **region)
 
-        # if file is not present in the archive
-        except KeyError:
-            grass.fatal("Could not find '%s' in '%s'" % (filename, archive))
+        if os.path.isfile(archive):
+            try:
+                grass.message("Inflating {} ...".format(filename))
+                a.extract(filename, tempdir)
+                grass.message("Importing {} as {} ..."
+                              .format(filename, output))
+                grass.run_command('r.in.bin',  flags='s', input=tempfile,
+                                  output=output, bytes=2, anull=-9999,
+                                  **region)
 
-        # make sure temporary files are cleaned
-        finally:
-            grass.try_remove(tempfile)
-            grass.try_rmdir(tempdir)
+            # if file is not present in the archive
+            except KeyError:
+                grass.warning("Could not find {} in {}. Skipping"
+                              .format(filename, archive))
+
+            # make sure temporary files are cleaned
+            finally:
+                grass.try_remove(tempfile)
+                grass.try_rmdir(tempdir)
+        else:
+            grass.warning("Could not find file {}. Skipping"
+                          .format(archive))
 
 
-def import_fields(res=None, tile=None):
-    """Import requested fields for a given tile or resolution."""
-
-    # parse needed options
-    fields = grass_str_list(options['fields'])
-    layers = grass_int_list(options['layers'])
+def import_variables(variables, bioclim, months, res=None, tile=None):
+    """Import requested variables for a given tile or resolution."""
 
     # compute region extents
     region = region_extents(res=res, tile=tile)
 
-    # for each of the requested fields
-    for field in fields:
+    # for each of the requested variables
+    for variable in variables:
 
         # alt is a special case since there is only one layer
-        if field == 'alt':
+        if variable == 'alt':
             import_layer('alt', region, res=res, tile=tile)
 
         # bio is a bit of a special case too since there are 19 layers
-        elif field == 'bio':
-            for layer in (layers if layers else range(1, 20)):
-                import_layer(field, region, layer=layer, res=res, tile=tile)
+        elif variable == 'bio':
+            for layer in bioclim:
+                import_layer(variable, region, layer=layer, res=res, tile=tile)
 
-        # other fields have 12 layers
+        # other variables have 12 layers
         else:
-            for layer in (layers if layers else range(1, 13)):
-                if layer > 12:
-                    grass.error("No layer '%d' for field '%s'"
-                                % (layer, field))
-                else:
-                    import_layer(field, region,
-                                 layer=layer, res=res, tile=tile)
+            for layer in months:
+                import_layer(variable, region, layer=layer, res=res, tile=tile)
 
 
-def convert_map(output, field):
+def convert_map(output, variable):
     """Convert imported raster map unit and format."""
 
     # prepare for unit conversion
-    if flags['c'] and field in ['tmin', 'tmax', 'tmean']:
-        grass.message("Converting <%s> to degree Celcius..." % output)
+    if flags['c'] and variable in ['tmin', 'tmax', 'tmean']:
+        grass.message("Converting {} to degree Celcius...".format(output))
         a = 0.1
         b = 0
-    elif flags['k'] and field in ['tmin', 'tmax', 'tmean']:
-        grass.message("Converting <%s> to Kelvin..." % output)
+    elif flags['k'] and variable in ['tmin', 'tmax', 'tmean']:
+        grass.message("Converting {} to Kelvin...".format(output))
         a = 0.1
         b = 273.15
-    elif flags['y'] and field == 'prec':
-        grass.message("Converting <%s> to meter per year..." % output)
+    elif flags['y'] and variable == 'prec':
+        grass.message("Converting {} to meter per year...".format(output))
         a = 0.012
         b = 0
     elif flags['f']:
-        grass.message("Converting <%s> to floating-point..." % output)
+        grass.message("Converting {} to floating-point...".format(output))
         a = 1
         b = 0
     else:
@@ -266,63 +247,64 @@ def convert_map(output, field):
     if a or b:
         grass.use_temp_region()
         grass.run_command('g.region', rast=output)
-        grass.mapcalc('$output=float($output*%s+%s)' % (a, b), output=output)
+        grass.mapcalc('$output=float($output*$a+$b)', a=a, b=b, output=output,
+                      overwrite=True)
         grass.del_temp_region()
 
-# Input and output name and region conventions
 
-def archive_name(field, res=None, tile=None, layer=None):
+# Input and output name and region conventions
+def archive_name(variable, res=None, tile=None, layer=None):
     """Return the name of the corresponding zip archive."""
 
     # for global data (the bio 30s data is packed in two files)
     if res:
-        if field == 'bio' and res == '30s':
+        if variable == 'bio' and res == '30s':
             if layer <= 9:
                 archive = 'bio1-9_30s_bil.zip'
             if layer >= 10:
                 archive = 'bio10-19_30s_bil.zip'
         else:
-            archive = field + '_' + res.replace('.', '-') + '_bil.zip'
+            archive = variable + '_' + res.replace('.', '-') + '_bil.zip'
 
     # for tiled data
     else:
-        archive = field + '_' + str(tile) + '.zip'
+        archive = variable + '_' + str(tile) + '.zip'
 
     # return full path
     return os.path.join(options['inputdir'], archive)
 
 
-def file_name(field, res=None, tile=None, layer=None):
-    """Return the name of the conrresponding binary file."""
+def file_name(variable, res=None, tile=None, layer=None):
+    """Return the name of the corresponding binary file."""
 
     # convert layer to a string or empty string if None
     layerstr = (str(layer) if layer else '')
 
     # for global data (the 30s data has different naming)
     if res:
-        if field != 'alt' and res == '30s':
-            return field + '_' + layerstr + '.bil'
+        if variable != 'alt' and res == '30s':
+            return variable + '_' + layerstr + '.bil'
         else:
-            return field + layerstr + '.bil'
+            return variable + layerstr + '.bil'
 
     # for tiled data
     else:
-        return field + layerstr + '_' + str(tile) + '.bil'
+        return variable + layerstr + '_' + str(tile) + '.bil'
 
 
-def output_name(field, res=None, tile=None, layer=None):
+def output_name(variable, res=None, tile=None, layer=None):
     """Return an output name for the resulting raster map."""
 
     # convert layer to a string or empty string if None
-    layerstr = (('%02i' % layer) if layer else '')
+    layerstr = "{:02d}".format(layer) if layer else ''
 
-    # for global datainp
+    # for global data layers
     if res:
-        name = res + '_' + field + layerstr
+        name = res + '_' + variable + layerstr
 
     # for tiled data
     else:
-        name = 't' + str(tile) + '_' + field + layerstr
+        name = 't' + str(tile) + '_' + variable + layerstr
 
     # return full name with prefix
     return options['prefix'] + name
@@ -358,35 +340,95 @@ def region_extents(res=None, tile=None):
                 'rows': 3600, 'cols': 3600}
 
 
+def patch_tiles(mt, out, vari, bc=None, mnth=None):
+    """Set region to tiles, and run r.patch"""
+
+    bc = (str(bc) if bc else '')
+    mnth = (str(mnth) if mnth else '')
+    grass.message(_("Patching the tiles for {}{}{} to {}"
+                    .format(vari, bc, mnth, out)))
+    if len(mt) > 1:
+        grass.use_temp_region()
+        grass.run_command("g.region", raster=mt)
+        grass.run_command("r.patch", input=mt, output=out)
+        grass.run_command("g.remove", type="raster", name=mt, flags="f",
+                          quiet=True)
+        grass.del_temp_region()
+    else:
+        # simply rename if there is only one tile
+        grass.run_command("g.rename", raster=[mt, out])
+
+
+def merge_tiles(variables, tiles, bioclim, months):
+    """Run patch_tiles for each of the combinations of variables"""
+
+    prefix = options['prefix']
+    for variable in variables:
+        if variable == 'alt':
+            mt = ['{}t{}_alt'.format(prefix, x) for x in tiles]
+            out = "{}alt".format(prefix)
+            patch_tiles(mt=mt, out=out, vari=variable)
+        elif variable == 'bioclim':
+            for i in bioclim:
+                mt = ['{}t{}_bio{:02d}'.format(prefix, x, int(i))
+                      for x in tiles]
+                out = "{}bio{:02d}".format(prefix, int(i))
+                patch_tiles(mt=mt, out=out, vari=variable, bc=i)
+        else:
+            for i in months:
+                mt = ['{}t{}_{}{:02d}'.format(prefix, x, variable, int(i))
+                      for x in tiles]
+                out = "{}{}{:02d}".format(prefix, variable, int(i))
+                patch_tiles(mt=mt, out=out, vari=variable, mnth=i)
+
+
 # Main function
 def main():
     """Main function, called at execution time."""
 
-    # parse requested resolutions and tiles
-    allres = grass_str_list(options['res'])
-    tiles = grass_str_list(options['tiles'])
+    # parse needed options
+    variables = options['variables'].split(',')
+    if options['bioclim']:
+        bioclim = map(int, options['bioclim'].split(','))
+        if not all(1 <= x <= 19 for x in bioclim):
+            grass.warning("Values for 'bioclim' need to be within the range"
+                          " 1-19. Ignoring values outside this range")
+    else:
+        bioclim = range(1, 20)
 
-    # check that tile names are legal
+    if options['months']:
+        months = map(int, options['months'].split(','))
+        if not all(1 <= x <= 12 for x in bioclim):
+            grass.warning("Values for 'months' need to be within the range"
+                          " 1-12. Ignoring values outside this range")
+    else:
+        months = range(1, 13)
+
+    allres = options['res'].split(',')
+
+    # import tiles
     if options['tiles']:
+        tiles = options['tiles'].split(',')
         legaltiles = [str(j)+str(i) for j in range(5) for i in range(12)]
         for t in tiles:
             if t not in legaltiles:
-                grass.fatal("Tile '%s' is not a valid WorldClim tile, see "
-                            "http://www.worldclim.org/tiles.php" % t)
+                grass.error("Tile {} is not a valid WorldClim tile, see "
+                            "http://www.worldclim.org/tiles.php".format(t))
         for tile in tiles:
-            import_fields(tile=tile)
+            import_variables(tile=tile, variables=variables, bioclim=bioclim,
+                             months=months)
+
+        # Merge tiles
+        if not flags['p']:
+            merge_tiles(variables, tiles, bioclim, months)
 
     # import global datasets
     if allres != ['']:
         for res in allres:
-            import_fields(res=res)
-
+            import_variables(res=res, variables=variables, bioclim=bioclim,
+                             months=months)
 
 # Main program
-
 if __name__ == "__main__":
     options, flags = grass.parser()
     main()
-
-# Links
-# [1] http://www.worldclim.org/current
