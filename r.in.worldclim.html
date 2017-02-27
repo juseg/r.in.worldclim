@@ -7,13 +7,22 @@ the generic format (bil). After downloading, you can run
 <em>r.in.worldclim</em> to import the layers in your GRASS GIS database.
 
 
-The script inflates requested files from their original archives before
+<p>The script inflates requested files from their original archives before
 importing them as raster maps into GRASS. The data can be imported by tiles
 with <em>tiles=...</em> or globally with <em>res=...</em>. If tiles are
 imported, they are by default patched to create one layer per variable. The
 user can override this behaviour using the <em>p</em> flag.
 
-<p>
+
+<h2>NOTE</h2>
+
+If you need data layers for a specific region, it is probably easiest to
+download the <a href="http://www.worldclim.org/tiles.php">tiles</a> covering
+that region. To find the tiles, you can use the <a
+href="https://github.com/ecodiv/r.in.worldclim.tiles">r.in.worldclim.tiles</a>
+addon, which finds the tiles that cover an user-defined region of interest and
+optionally downloads them.
+
 
 <h2>EXAMPLES</h2>
 
@@ -47,6 +56,6 @@ r.in.worldclim.py fields=tmean,prec tiles=16
 
 <h2>AUTHOR</h2>
 
-<p>Julien Seguinot, Stockholm University
+Julien Seguinot, Stockholm University
 
 <p>Paulo van Breugel (for GRASS > v7.0, adding merging of tiles)

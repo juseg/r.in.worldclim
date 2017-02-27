@@ -4,12 +4,12 @@
 """
 MODULE:     r.in.worldclim
 
-AUTHOR(S):  Julien Seguinot <seguinot@vaw.baug.ethz.ch> (original author)
+AUTHOR(S):  Julien Seguinot <seguinot@vaw.baug.ethz.ch>
             Paulo van Breugel <pvb@ecodiv.earth>
 
 PURPOSE:    Import multiple WorldClim current [1] climate data.
 
-COPYRIGHT:  (c) 2011-2016 Julien Seguinot
+COPYRIGHT:  (C) 1997-2017 by Julien Seguinot and the GRASS Development Team
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -34,17 +34,7 @@ COPYRIGHT:  (c) 2011-2016 Julien Seguinot
 #% key: inputdir
 #% description: Directory containing input files (default: current)
 #% required: no
-#% guisection: import
-#%end
-
-#%option
-#% key: variables
-#% type: string
-#% description: Variable(s) to import
-#% options: tmin,tmax,tmean,prec,bioclim,alt
-#% required: yes
-#% multiple: yes
-#% guisection: import
+#% guisection: Import
 #%end
 
 #%option
@@ -53,7 +43,7 @@ COPYRIGHT:  (c) 2011-2016 Julien Seguinot
 #% description: 30 arc-minutes tiles(s) to import
 #% required: no
 #% multiple: yes
-#% guisection: import
+#% guisection: Import
 #%end
 
 #%option
@@ -63,23 +53,37 @@ COPYRIGHT:  (c) 2011-2016 Julien Seguinot
 #% options: 30s,2.5m,5m,10m
 #% required: no
 #% multiple: yes
-#% guisection: import
+#% guisection: Import
+#%end
+
+#%option
+#% key: variables
+#% type: string
+#% description: Variable(s) to import
+#% options: tmin,tmax,tmean,prec,bioclim,alt
+#% required: yes
+#% multiple: yes
+#% guisection: Variables
 #%end
 
 #%option
 #% key: bioclim
-#% type: integer
+#% type: string
 #% description: Bioclim variable(s) to import (default: all)
 #% required: no
 #% multiple: yes
+#% options: 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19
+#% guisection: Variables
 #%end
 
 #%option
 #% key: months
-#% type: integer
+#% type: string
 #% description: Month(s) for which to import climate data (default: all)
 #% required: no
 #% multiple: yes
+#% options: 1,2,3,4,5,6,7,8,9,10,11,12
+#% guisection: Variables
 #%end
 
 #%option G_OPT_R_BASENAME_OUTPUT
@@ -87,38 +91,37 @@ COPYRIGHT:  (c) 2011-2016 Julien Seguinot
 #% type: string
 #% description: Prefix for imported raster layers
 #% required: no
-#% answer: wc_
-#% guisection: output
+#% guisection: Output
 #%end
 
 #%flag
 #%  key: c
 #%  description: Convert tmin, tmax, tmean to degree Celcius
-#% guisection: output
+#% guisection: Output
 #%end
 
 #%flag
 #%  key: k
 #%  description: Convert tmin, tmax, tmean to Kelvin
-#% guisection: output
+#% guisection: Output
 #%end
 
 #%flag
 #%  key: y
 #%  description: Convert precipitation to meter per year
-#% guisection: output
+#% guisection: Output
 #%end
 
 #%flag
 #%  key: f
 #%  description: Convert to floating-point
-#% guisection: output
+#% guisection: Output
 #%end
 
 #%flag
 #%  key: p
 #%  description: do not patch imported tiles
-#% guisection: output
+#% guisection: Output
 #%end
 
 #%rules
@@ -134,10 +137,8 @@ COPYRIGHT:  (c) 2011-2016 Julien Seguinot
 #%end
 
 import os
-import sys
 from zipfile import ZipFile
 import grass.script as grass
-import uuid
 
 
 # Import functions
@@ -339,14 +340,13 @@ def region_extents(res=None, tile=None):
                 'west': 30*(tilecol-6), 'east': 30*(tilecol-5),
                 'rows': 3600, 'cols': 3600}
 
-
 def patch_tiles(mt, out, vari, bc=None, mnth=None):
     """Set region to tiles, and run r.patch"""
 
     bc = (str(bc) if bc else '')
     mnth = (str(mnth) if mnth else '')
-    grass.message(_("Patching the tiles for {}{}{} to {}"
-                    .format(vari, bc, mnth, out)))
+    grass.message("Patching the tiles for {}{}{} to {}"
+                    .format(vari, bc, mnth, out))
     if len(mt) > 1:
         grass.use_temp_region()
         grass.run_command("g.region", raster=mt)
@@ -385,14 +385,14 @@ def merge_tiles(variables, tiles, bioclim, months):
 # Main function
 def main():
     """Main function, called at execution time."""
-
-    # parse needed options
+    
+    # parse options to import layers
     variables = options['variables'].split(',')
     if options['bioclim']:
         bioclim = map(int, options['bioclim'].split(','))
         if not all(1 <= x <= 19 for x in bioclim):
-            grass.warning("Values for 'bioclim' need to be within the range"
-                          " 1-19. Ignoring values outside this range")
+            grass.warning("Values for 'bioclim' need to be within the "
+                          "range 1-19. Ignoring values outside this range")
     else:
         bioclim = range(1, 20)
 
@@ -413,10 +413,11 @@ def main():
         for t in tiles:
             if t not in legaltiles:
                 grass.error("Tile {} is not a valid WorldClim tile, see "
-                            "http://www.worldclim.org/tiles.php".format(t))
+                            "http://www.worldclim.org/tiles.php"
+                            .format(t))
         for tile in tiles:
-            import_variables(tile=tile, variables=variables, bioclim=bioclim,
-                             months=months)
+            import_variables(tile=tile, variables=variables,
+                             bioclim=bioclim, months=months)
 
         # Merge tiles
         if not flags['p']:
@@ -425,8 +426,8 @@ def main():
     # import global datasets
     if allres != ['']:
         for res in allres:
-            import_variables(res=res, variables=variables, bioclim=bioclim,
-                             months=months)
+            import_variables(res=res, variables=variables,
+                             bioclim=bioclim, months=months)
 
 # Main program
 if __name__ == "__main__":
