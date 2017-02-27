@@ -12,11 +12,12 @@ Examples
 
 Import global mean temperature at 10 arc-min resolution::
 
-    r.in.worldclim.py fields=tmean res=10m
+    r.in.worldclim variables=tmean res=10m
 
-Import temperature and precipitation data for tile 16 (central Europe)::
+Import temperature and precipitation data for Nepal using the vector layer 'nepal' to define the region of interest. r.in.worldclim will download the tiles covering Nepal (tile 18,28) to the current directory. r.in.worldclim will import the layers in the zipfile in the GRASS GIS database, and patch for each variable the two imported tiles to create one layer per variable::
 
-    r.in.worldclim.py fields=tmean,prec tiles=16
+    r.in.worldclim.tiles variables=tmean,prec vector=central_europe
+    r.in.worldclim variables=tmean,prec tiles=18,28
 
 References
 ----------
