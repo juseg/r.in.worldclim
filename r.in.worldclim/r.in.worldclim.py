@@ -60,7 +60,7 @@ COPYRIGHT:  (C) 1997-2017 by Julien Seguinot and the GRASS Development Team
 #% key: variables
 #% type: string
 #% description: Variable(s) to import
-#% options: tmin,tmax,tmean,prec,bioclim,alt
+#% options: tmin,tmax,tmean,prec,bio,alt
 #% required: yes
 #% multiple: yes
 #% guisection: Variables
@@ -340,13 +340,14 @@ def region_extents(res=None, tile=None):
                 'west': 30*(tilecol-6), 'east': 30*(tilecol-5),
                 'rows': 3600, 'cols': 3600}
 
+
 def patch_tiles(mt, out, vari, bc=None, mnth=None):
     """Set region to tiles, and run r.patch"""
 
     bc = (str(bc) if bc else '')
     mnth = (str(mnth) if mnth else '')
     grass.message("Patching the tiles for {}{}{} to {}"
-                    .format(vari, bc, mnth, out))
+                  .format(vari, bc, mnth, out))
     if len(mt) > 1:
         grass.use_temp_region()
         grass.run_command("g.region", raster=mt)
@@ -368,7 +369,7 @@ def merge_tiles(variables, tiles, bioclim, months):
             mt = ['{}t{}_alt'.format(prefix, x) for x in tiles]
             out = "{}alt".format(prefix)
             patch_tiles(mt=mt, out=out, vari=variable)
-        elif variable == 'bioclim':
+        elif variable == 'bio':
             for i in bioclim:
                 mt = ['{}t{}_bio{:02d}'.format(prefix, x, int(i))
                       for x in tiles]
@@ -385,7 +386,7 @@ def merge_tiles(variables, tiles, bioclim, months):
 # Main function
 def main():
     """Main function, called at execution time."""
-    
+
     # parse options to import layers
     variables = options['variables'].split(',')
     if options['bioclim']:
@@ -398,7 +399,7 @@ def main():
 
     if options['months']:
         months = map(int, options['months'].split(','))
-        if not all(1 <= x <= 12 for x in bioclim):
+        if not all(1 <= x <= 12 for x in months):
             grass.warning("Values for 'months' need to be within the range"
                           " 1-12. Ignoring values outside this range")
     else:
@@ -421,7 +422,8 @@ def main():
 
         # Merge tiles
         if not flags['p']:
-            merge_tiles(variables, tiles, bioclim, months)
+            merge_tiles(variables=variables, tiles=tiles, bioclim=bioclim,
+                        months=months)
 
     # import global datasets
     if allres != ['']:
