@@ -8,7 +8,7 @@ AUTHOR(S):  Paulo van Breugel <pvb@ecodiv.earth>
 
 PURPOSE:    Find worldclim tiles that cover the region of interest
 
-COPYRIGHT: (C) 1997-2016 by the GRASS Development Team
+COPYRIGHT: (C) 1997-2017 by the GRASS Development Team
 
             This program is free software under the GNU General Public
             License (>=v3). Read the file COPYING that comes with GRASS
@@ -73,34 +73,38 @@ import sys
 import grass.script as grass
 import math
 
+
 def download_files(variables, tiles, path):
     """Download files. The download routine is from
-    http://stackoverflow.com/questions/22676/how-do-i-download-a-file-over-http-using-python"""
-    
+    http://stackoverflow.com/questions/22676/
+    how-do-i-download-a-file-over-http-using-python"""
+
     import urllib2
     bs = "http://biogeo.ucdavis.edu/data/climate/worldclim/1_4/tiles/cur/"
     murl = ["{}{}_{}.zip"
             .format(bs, x, y) for x in variables for y in tiles]
     for url in murl:
-        file_name = "{}{}".format(path, url.split('/')[-1])
-        if not os.path.isfile(file_name):
+        file_name = url.split('/')[-1]
+        file_path = "{}{}".format(path, file_name)
+        if not os.path.isfile(file_path):
             grass.info("\n")
             u = urllib2.urlopen(url)
-            f = open(file_name, 'wb')
+            f = open(file_path, 'wb')
             meta = u.info()
             file_size = int(meta.getheaders("Content-Length")[0])
-            grass.info("Downloading: {} Bytes: {}"
-                       .format(file_name, file_size)) 
+            grass.info("Downloading: {} ({:4.1f} Mb)"
+                       .format(file_name, file_size/1000000.))
             file_size_dl = 0
             block_sz = 8192
             while True:
                 buffer = u.read(block_sz)
                 if not buffer:
                     break
-            
+
                 file_size_dl += len(buffer)
                 f.write(buffer)
-                status = r"%10d [%3.2f%%]" % (file_size_dl, file_size_dl * 100. / file_size)
+                status = (r"Downloaded: {:3.2f}%"
+                          .format(file_size_dl * 100. / file_size))
                 status = status + chr(8)*(len(status)+1)
                 print status,
 
@@ -118,9 +122,9 @@ def main(options, flags):
     raster = options['raster']
     path = options['dir']
     if path:
-        "{}/".format(path)
+        path = r"{}/".format(path)
     flag_g = flags['g']
-    
+
     n, s, w, e = ([] for i in range(4))
 
     if region:
@@ -161,7 +165,7 @@ def main(options, flags):
         M = ', '.join(tiles[:-1]) + ' & ' + tiles[-1]
     elif len(tiles) == 1:
         M = tiles[0]
-        
+
     if not options['variables']:
         if flag_g:
             print(','.join(tiles))
