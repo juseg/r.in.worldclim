@@ -5,7 +5,7 @@ r.in.worldclim*
 
 **r.in.worldclim** is a Python script for `GRASS GIS`_ to import multiple files from the `WorldClim current`_ climate dataset. The data can be imported by tiles with ``tiles=...`` or globally with ``res=...``. The script inflates requested files from their original archives before importing them as raster maps into GRASS. In GRASS, type ``r.in.worldclim.py --help`` for a more complete list of options.
 
-**r.in.worldclim.tiles** is a Python script for `GRASS GIS`_ to import to find tiles from the `WorldClim current`_ climate dataset, get the list of tiles that cover an user-defined region of interest, and optionally downloads the tiles. 
+**r.in.worldclim.tiles** is a Python script for `GRASS GIS`_ to get a list of tiles from the `WorldClim current`_ climate dataset that cover an user-defined region of interest, and optionally downloads the tiles. 
 
 Examples
 --------
