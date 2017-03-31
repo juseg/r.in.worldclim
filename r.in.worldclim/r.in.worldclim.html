@@ -1,0 +1,61 @@
+<h2>DESCRIPTION</h2>
+
+<em>r.in.worldclim</em> imports multiple files from the <a
+href="http://www.worldclim.org/current/">WorldClim current</a> climate dataset.
+You first needs to download the layers first as zip files. Make sure to select
+the generic format (bil). After downloading, you can run
+<em>r.in.worldclim</em> to import the layers in your GRASS GIS database.
+
+
+<p>The script inflates requested files from their original archives before
+importing them as raster maps into GRASS. The data can be imported by tiles
+with <em>tiles=...</em> or globally with <em>res=...</em>. If tiles are
+imported, they are by default patched to create one layer per variable. The
+user can override this behaviour using the <em>p</em> flag.
+
+
+<h2>NOTE</h2>
+
+If you need data layers for a specific region, it is probably easiest to
+download the <a href="http://www.worldclim.org/tiles.php">tiles</a> covering
+that region. To find the tiles, you can use the <a
+href="https://github.com/ecodiv/r.in.worldclim.tiles">r.in.worldclim.tiles</a>
+addon, which finds the tiles that cover an user-defined region of interest and
+optionally downloads them.
+
+
+<h2>EXAMPLES</h2>
+
+Import global mean temperature at 10 arc-min resolution:
+
+<div class="code"><pre>
+r.in.worldclim.py fields=tmean res=10m
+</pre></div>
+
+<p>
+Import temperature and precipitation data for tile 16 (central Europe):
+
+<div class="code"><pre>
+r.in.worldclim.py fields=tmean,prec tiles=16
+</pre></div>
+
+<h2>REFERENCES</h2>
+
+<ul>
+  <li>Hijmans, R.J., S.E. Cameron, J.L. Parra, P.G. Jones and A. Jarvis,
+  (2005).
+      Very high resolution interpolated climate surfaces for global land areas.
+      International Journal of Climatology 25, 1965-1978
+      doi:<a href="http://dx.doi.org/10.1002/joc.1276">10.1002/joc.1276</a>.</li>
+  <li>J. Seguinot, C. Khroulev, I. Rogozhina, Q. Zhang, and A. Stroeven (2013).
+      The effect of climate forcing on numerical simulations of the Cordilleran
+      Ice Sheet at the last Glacial Maximum. The Cryosphere Discussions, 7,
+      1-42, doi:<a
+      href="http://dx.doi.org/10.5194/tcd-7-6171-2013">10.5194/tcd-7-6171-2013</a>.</li>
+</ul>
+
+<h2>AUTHOR</h2>
+
+Julien Seguinot, Stockholm University
+
+<p>Paulo van Breugel (for GRASS > v7.0, adding merging of tiles)

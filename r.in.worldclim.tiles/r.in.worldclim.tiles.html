@@ -1,0 +1,58 @@
+<h2>DESCRIPTION</h2>
+
+<em>r.in.worldclim.tiles</em> finds the tiles from <a
+href="http://www.worldclim.org/tiles.php">WorldClim</a> (current climate) that
+cover an user defined region of interest (ROI) and optionally downloads them.
+
+
+<p><a href="http://www.worldclim.org/">WorldClim</a> (version 1.4) provides
+data layers of the average monthly climate data for minimum, mean, and maximum
+temperature and for precipitation for 1960-1990. In addition, one can download
+derived bioclimatic variables.
+
+<p>This addon is to download tiles for a specific region that can be defined
+using a vector or raster layer or a saved region. After downloading, one can
+use the addon <a
+href="https://github.com/ecodiv/r.in.worldclim">r.in.worldclim</a> to import
+the layers in your GRASS GIS database.
+
+<p>If you use this addon, you are strongly encouraged to visit the <a
+href="http://www.worldclim.org/version1">Worldclim</a> website, for more
+information about the methods used to generate the climate layers, the
+units and formats of the data and the names of developers.
+
+<p>If you download and use the data, make sure to cite the data:
+
+<p><i>Hijmans, R.J., S.E. Cameron, J.L. Parra, P.G. Jones and A. Jarvis, 2005.
+Very high resolution interpolated climate surfaces for global land areas.
+International Journal of Climatology 25: 1965-1978.</i>
+
+<h2>EXAMPLES</h2>
+
+Download the tiles for monthly rainfall for Nepal
+
+<div class="code"><pre>
+r.in.worldclim.tiles vector=Nepal variables=prec
+</pre></div>
+
+<p>Determine the tiles for temperature and precipitation data for central
+Europe, using a raster layer to define the region of interest. As output the
+addon provides a list of the tiles that you can download.
+
+<div class="code"><pre>
+r.in.worldclim.riles variables=tmean,prec raster=centr_europe
+</pre></div>
+
+<h2>REFERENCES</h2>
+
+<ul>
+  <li>Hijmans, R.J., S.E. Cameron, J.L. Parra, P.G. Jones and A. Jarvis,
+  (2005).
+      Very high resolution interpolated climate surfaces for global land areas.
+      International Journal of Climatology 25, 1965-1978
+      doi:<a href="http://dx.doi.org/10.1002/joc.1276">10.1002/joc.1276</a>.</li>
+</ul>
+
+<h2>AUTHOR</h2>
+
+Paulo van Breugel
